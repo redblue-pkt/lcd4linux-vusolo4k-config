@@ -1,0 +1,54 @@
+#!/bin/sh
+
+eXit() {
+	echo .
+	exit $1
+} 
+
+test -e /etc/.lcdweather || eXit 1
+
+LW_DIR=/tmp/LuaWeather
+DATA_DIR=/tmp/lcd
+DATA_API=$LW_DIR/api.data
+
+if [ -e /var/tuxbox/config/LuaWeatherApp.conf ]; then
+	DATA_LOC=$(grep -m1 "name=" /var/tuxbox/config/LuaWeatherApp.conf | cut -d= -f2 | cut -d, -f2)
+fi
+test -z $DATA_LOC && eXit 1
+
+if [ -e /var/tuxbox/config/LuaWeatherApp.conf ]; then
+	API_KEY=$(grep "^apikey=" /var/tuxbox/config/LuaWeatherApp.conf | cut -d= -f2)
+fi
+
+test -z $API_KEY && eXit 1
+test -d $DATA_DIR || mkdir -p $DATA_DIR
+test -d $LW_DIR || mkdir -p $LW_DIR
+
+wget -O $DATA_API "http://api.openweathermap.org/data/2.5/forecast/daily?q=${DATA_LOC}&mode=xml&units=metric&cnt=3&lang=en&APPID=${API_KEY}"
+
+if [ -e $DATA_API ]; then
+
+	query=$DATA_LOC
+	temperatures=$(cat $DATA_API | grep -o -P -i "(?<=<temperature day=\")[^(\"|\.)]*")
+	icons=$(cat $DATA_API | grep -o -P -i "(?<=var=\")[^\"]*")
+
+	echo "$query" > $DATA_DIR/location
+	echo "$temperatures" > $DATA_DIR/temperatures
+
+	rm -f $DATA_DIR/weathericons
+	for url in $icons; do
+		icon=${url##*/}
+		echo ${icon}.png >> $DATA_DIR/weathericons
+	done
+
+	#TODO: fix lan/lon-entrys in $DATA_DIR/location
+	#http://maps.google.com/maps/geo?output=xml&oe=utf8&ll=(LAT),(LON)&key=asdad&hl=de
+
+	rm -rf $LW_DIR
+else
+	rm -rf $DATA_DIR/location 
+	rm -rf $DATA_DIR/temperatures
+	rm -rf $DATA_DIR/weathericons
+fi
+
+eXit 0
