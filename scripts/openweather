@@ -29,6 +29,7 @@ wget -O $DATA_API "http://api.openweathermap.org/data/2.5/forecast/daily?q=${DAT
 if [ -e $DATA_API ]; then
 
 	query=$DATA_LOC
+	# we need full grep
 	temperatures=$(cat $DATA_API | grep -o -P -i "(?<=<temperature day=\")[^(\"|\.)]*")
 	icons=$(cat $DATA_API | grep -o -P -i "(?<=var=\")[^\"]*")
 
@@ -40,9 +41,6 @@ if [ -e $DATA_API ]; then
 		icon=${url##*/}
 		echo ${icon}.png >> $DATA_DIR/weathericons
 	done
-
-	#TODO: fix lan/lon-entrys in $DATA_DIR/location
-	#http://maps.google.com/maps/geo?output=xml&oe=utf8&ll=(LAT),(LON)&key=asdad&hl=de
 
 	rm -rf $LW_DIR
 else
